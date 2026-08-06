@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>人生选择模拟器 · 迪士尼治愈风</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Quicksand', 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(160deg, #B3DFFF 0%, #D4ECFC 25%, #FFF0E6 60%, #FFE8D6 100%);
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        /* 浮动云朵 */
+        .cloud {
+            position: fixed;
+            border-radius: 100px;
+            background: rgba(255,255,255,0.7);
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(2px);
+        }
+        .cloud:nth-child(1) { width:120px; height:50px; top:8%; left:5%; animation: drift 20s infinite ease-in-out; }
+        .cloud:nth-child(2) { width:90px; height:40px; top:20%; right:8%; animation: drift 25s infinite ease-in-out reverse; }
+        .cloud:nth-child(3) { width:100px; height:45px; bottom:15%; left:3%; animation: drift 22s infinite ease-in-out; }
+        .cloud:nth-child(4) { width:80px; height:35px; bottom:8%; right:6%; animation: drift 18s infinite ease-in-out reverse; }
+        @keyframes drift {
+            0%,100% { transform: translateX(0) translateY(0); }
+            50% { transform: translateX(30px) translateY(-15px); }
+        }
+        /* 闪烁星星 */
+        .sparkle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 0;
+            font-size: 20px;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+        .sparkle:nth-child(5) { top:12%; left:15%; animation-delay:0s; }
+        .sparkle:nth-child(6) { top:30%; right:12%; animation-delay:1s; font-size:16px; }
+        .sparkle:nth-child(7) { bottom:25%; left:8%; animation-delay:2s; font-size:24px; }
+        .sparkle:nth-child(8) { bottom:12%; right:15%; animation-delay:0.5s; font-size:18px; }
+        @keyframes twinkle {
+            0%,100% { opacity:0.3; transform: scale(0.8); }
+            50% { opacity:0.9; transform: scale(1.2); }
+        }
+
+        /* ===== 主容器 ===== */
+        .game-box {
+            max-width: 880px;
+            width: 100%;
+            background: rgba(255, 252, 245, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 28px 30px 24px;
+            box-shadow: 0 20px 60px rgba(255, 160, 120, 0.2), inset 0 2px 4px rgba(255,255,255,0.8);
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== 顶部 ===== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            margin-bottom: 18px;
+        }
+        .title-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .avatar {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFD5B8, #FF9B6B);
+            border: 4px solid #fff;
+            box-shadow: 0 6px 20px rgba(255, 139, 107, 0.3);
+            position: relative;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+        .avatar:hover { transform: scale(1.08) rotate(-3deg); }
+        .avatar .eye {
+            position: absolute; width: 9px; height: 11px;
+            background: #4A3728; border-radius: 50%; top: 20px;
+        }
+        .avatar .eye.l { left: 12px; }
+        .avatar .eye.r { right: 12px; }
+        .avatar .eye::after {
+            content: ''; position: absolute; width: 3px; height: 3px;
+            background: #fff; border-radius: 50%; top: 2px; left: 2px;
+        }
+        .avatar .mouth {
+            position: absolute; bottom: 12px; left: 50%;
+            transform: translateX(-50%); width: 18px; height: 9px;
+            border-bottom: 3px solid #8B5E3C; border-radius: 0 0 20px 20px;
+        }
+        .avatar .cheek {
+            position: absolute; width: 10px; height: 7px;
+            background: rgba(255, 150, 130, 0.4); border-radius: 50%; top: 28px;
+        }
+        .avatar .cheek.l { left: 7px; }
+        .avatar .cheek.r { right: 7px; }
+        .avatar.dreamer { background: radial-gradient(circle at 35% 30%, #FFE0C0, #FF9B6B); }
+        .avatar.athlete { background: radial-gradient(circle at 35% 30%, #C8F0C0, #6BBE5A); }
+        .avatar.heir { background: radial-gradient(circle at 35% 30%, #FFE8A0, #E8C060); }
+        .avatar.artist { background: radial-gradient(circle at 35% 30%, #E8C8E0, #C080B0); }
+
+        .main-title {
+            font-size: 22px; font-weight: 800;
+            color: #5A3E2A;
+            background: linear-gradient(135deg, rgba(255, 213, 180, 0.4), rgba(255, 180, 150, 0.2));
+            padding: 5px 18px 5px 16px; border-radius: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            display: inline-flex; align-items: center; gap: 6px;
+            letter-spacing: 0.5px;
+        }
+        .main-title small {
+            font-weight: 500; font-size: 13px;
+            color: #A07860; background: rgba(255,255,255,0.5);
+            padding: 1px 12px; border-radius: 30px;
+        }
+        .identity-badge {
+            background: linear-gradient(135deg, #FFF0E0, #FFE0CC);
+            padding: 5px 16px; border-radius: 40px;
+            font-size: 13px; font-weight: 700; color: #5A3E2A;
+            border: 2px solid rgba(255,255,255,0.7);
+            box-shadow: 0 3px 12px rgba(255,160,120,0.1);
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .stage-badge {
+            background: linear-gradient(135deg, #D4ECFC, #B3DFFF);
+            padding: 6px 20px; border-radius: 40px;
+            font-size: 15px; font-weight: 700; color: #2E5C8A;
+            border: 2px solid rgba(255,255,255,0.7);
+            box-shadow: 0 3px 12px rgba(100,160,220,0.15);
+            white-space: nowrap;
+        }
+
+        /* ===== 仪表盘 ===== */
+        .dashboard {
+            display: flex; gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(255,245,235,0.5), rgba(235,245,255,0.3));
+            border-radius: 32px; padding: 14px 18px;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .radar-wrap {
+            flex: 0 0 130px; height: 130px; width: 130px;
+            filter: drop-shadow(0 4px 12px rgba(255,160,120,0.1));
+        }
+        .radar-wrap canvas { width: 100% !important; height: 100% !important; }
+        .attrs-wrap { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 6px; }
+        .attr-row {
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.5);
+            padding: 4px 12px 4px 6px; border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+        .attr-icon { font-size: 17px; width: 24px; text-align: center; }
+        .attr-label { font-size: 11px; font-weight: 700; color: #6A5240; width: 30px; flex-shrink: 0; }
+        .attr-bar-bg {
+            flex: 1; height: 10px;
+            background: rgba(255,240,230,0.6);
+            border-radius: 20px; overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .attr-bar-fill {
+            height: 100%; border-radius: 20px;
+            transition: width 0.6s cubic-bezier(0.34, 1.2, 0.64, 1);
+            width: 50%;
+        }
+        .attr-bar-fill.energy { background: linear-gradient(90deg, #FFB088, #FF7E5F); }
+        .attr-bar-fill.money { background: linear-gradient(90deg, #8ECA8E, #5BAE5B); }
+        .attr-bar-fill.mind { background: linear-gradient(90deg, #7EC0E8, #4A9FD8); }
+        .attr-bar-fill.relationship { background: linear-gradient(90deg, #F0A0B0, #E07090); }
+        .attr-val {
+            font-size: 13px; font-weight: 700; color: #5A3E2A;
+            width: 28px; text-align: right; font-variant-numeric: tabular-nums;
+            background: rgba(255,255,255,0.4); padding: 0 4px; border-radius: 20px;
+        }
+        .attr-val.flash { color: #FF7E5F; transform: scale(1.15); }
+
+        /* ===== 选项区 ===== */
+        .choices-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+        .choice-card {
+            background: rgba(255, 250, 242, 0.85);
+            border-radius: 24px;
+            padding: 0 0 14px;
+            border: 3px solid rgba(255, 220, 190, 0.4);
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+            box-shadow: 0 6px 20px rgba(255, 160, 120, 0.06);
+            position: relative;
+            text-align: center;
+            overflow: hidden;
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+        }
+        .choice-card:hover {
+            border-color: #FFB088;
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 40px rgba(255, 139, 107, 0.18);
+            background: rgba(255, 250, 242, 0.95);
+        }
+        .choice-card:active { transform: translateY(-3px) scale(0.98); }
+        .choice-card.disabled { pointer-events: none; opacity: 0.4; filter: grayscale(0.3); transform: none !important; }
+
+        .choice-illustration {
+            width: 100%;
+            height: 130px;
+            background: linear-gradient(135deg, #FFF0E0, #FFE8D6);
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .choice-illustration img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        .choice-card:hover .choice-illustration img { transform: scale(1.06); }
+
+        .choice-emoji {
+            font-size: 24px;
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 2px;
+        }
+        .choice-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4A3728;
+            line-height: 1.3;
+            padding: 0 12px;
+        }
+        .choice-hint {
+            font-size: 12px;
+            color: #B08868;
+            margin-top: 4px;
+            font-weight: 500;
+            background: rgba(255, 200, 160, 0.15);
+            padding: 2px 14px;
+            border-radius: 30px;
+            display: inline-block;
+            align-self: center;
+        }
+        .choice-tag {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #FF7E5F;
+            border: 2px solid rgba(255, 200, 160, 0.3);
+            backdrop-filter: blur(4px);
+            z-index: 2;
+        }
+
+        /* ===== 叙事区 ===== */
+        .narrative-box {
+            background: linear-gradient(135deg, rgba(255,245,235,0.6), rgba(235,245,255,0.3));
+            border-radius: 24px;
+            padding: 14px 22px;
+            min-height: 62px;
+            display: flex;
+            align-items: center;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            margin-bottom: 4px;
+        }
+        .narrative-box::before {
+            content: '🌈';
+            position: absolute;
+            top: -12px;
+            left: 18px;
+            font-size: 22px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08));
+        }
+        .narrative-text {
+            font-size: 15px;
+            color: #5A4A38;
+            line-height: 1.7;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            padding-left: 8px;
+        }
+        .narrative-text.show { opacity: 1; }
+        .narrative-text .age-tag {
+            background: linear-gradient(135deg, #FFE0CC, #FFCBB0);
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #5A3E2A;
+            margin-right: 8px;
+            display: inline-block;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        /* ===== 继续按钮 ===== */
+        .continue-area { display: flex; justify-content: flex-end; margin-top: 14px; }
+        .btn-continue {
+            background: linear-gradient(145deg, #FF9B6B, #FF7E5F);
+            border: none; padding: 11px 36px;
+            border-radius: 60px; font-size: 16px; font-weight: 700;
+            color: #fff; cursor: pointer;
+            transition: 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+            box-shadow: 0 6px 20px rgba(255, 139, 107, 0.3);
+            display: none; align-items: center; gap: 8px;
+            border: 2px solid rgba(255,255,255,0.4);
+        }
+        .btn-continue:hover { transform: translateY(-4px) scale(1.03); box-shadow: 0 12px 32px rgba(255, 139, 107, 0.4); }
+        .btn-continue.show { display: inline-flex; }
+
+        /* ===== 确认弹窗 ===== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(90, 60, 40, 0.4);
+            backdrop-filter: blur(10px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 999; padding: 24px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            max-width: 440px; width: 100%;
+            background: linear-gradient(160deg, #FFFCF5, #FFF5EC);
+            border-radius: 40px; padding: 28px 30px 24px;
+            box-shadow: 0 40px 100px rgba(80, 50, 30, 0.25);
+            border: 3px solid rgba(255, 255, 255, 0.7);
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+            position: relative;
+        }
+        .modal-box .avatar-mini {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFD5B8, #FF9B6B);
+            border: 3px solid #fff;
+            box-shadow: 0 4px 16px rgba(255,139,107,0.2);
+            margin: -32px auto 6px; position: relative;
+        }
+        .modal-box .avatar-mini .eye {
+            position: absolute; width: 7px; height: 9px;
+            background: #4A3728; border-radius: 50%; top: 18px;
+        }
+        .modal-box .avatar-mini .eye.l { left: 11px; }
+        .modal-box .avatar-mini .eye.r { right: 11px; }
+        .modal-box .avatar-mini .eye::after {
+            content: ''; position: absolute; width: 3px; height: 3px;
+            background: #fff; border-radius: 50%; top: 2px; left: 2px;
+        }
+        .modal-box .avatar-mini .mouth {
+            position: absolute; bottom: 9px; left: 50%;
+            transform: translateX(-50%); width: 12px; height: 6px;
+            border-bottom: 3px solid #8B5E3C; border-radius: 0 0 20px 20px;
+        }
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-title { font-size: 20px; font-weight: 800; color: #5A3E2A; text-align: center; margin-top: 2px; }
+        .modal-sub { text-align: center; font-size: 13px; color: #B08868; margin-bottom: 14px; }
+        .modal-choice-name {
+            background: linear-gradient(135deg, #FFF0E0, #FFE8D6);
+            border-radius: 18px; padding: 10px 14px;
+            font-weight: 700; color: #4A3728; text-align: center;
+            margin-bottom: 14px; font-size: 16px;
+            border: 2px solid rgba(255, 220, 190, 0.3);
+        }
+        .modal-balance { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .modal-balance-col {
+            flex: 1; min-width: 80px;
+            background: rgba(230, 248, 230, 0.4);
+            border-radius: 18px; padding: 10px 14px;
+            border: 2px solid rgba(120, 200, 120, 0.12);
+        }
+        .modal-balance-col.loss-col {
+            background: rgba(252, 235, 235, 0.4);
+            border-color: rgba(220, 130, 130, 0.12);
+        }
+        .modal-balance-col .col-label { font-size: 12px; font-weight: 700; color: #8A7860; margin-bottom: 2px; display: block; }
+        .modal-balance-col .col-item { font-size: 14px; line-height: 1.9; color: #4A3728; }
+        .modal-balance-col .col-item .gain { color: #4A9F4A; font-weight: 600; }
+        .modal-balance-col .col-item .loss { color: #D06060; font-weight: 600; }
+        .modal-timer { text-align: center; font-size: 15px; color: #8A7860; margin-bottom: 14px; font-weight: 500; }
+        .modal-timer .count { font-weight: 800; font-size: 24px; color: #FF9B6B; display: inline-block; min-width: 30px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .modal-actions button {
+            padding: 10px 28px; border-radius: 60px; border: none;
+            font-size: 15px; font-weight: 700; cursor: pointer;
+            transition: 0.25s; flex: 1; max-width: 150px;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .modal-actions .btn-cancel { background: #F0E8DE; color: #8A7860; }
+        .modal-actions .btn-cancel:hover { background: #E8E0D4; transform: translateY(-2px); }
+        .modal-actions .btn-confirm {
+            background: #D0C0B0; color: #5A4A38; opacity: 0.4; pointer-events: none;
+        }
+        .modal-actions .btn-confirm.enabled {
+            opacity: 1; pointer-events: auto;
+            background: linear-gradient(145deg, #FF9B6B, #FF7E5F); color: #fff;
+        }
+        .modal-actions .btn-confirm.enabled:hover {
+            transform: translateY(-3px); box-shadow: 0 10px 28px rgba(255,139,107,0.3);
+        }
+
+        /* ===== 结局弹窗 ===== */
+        .ending-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(90, 60, 40, 0.5);
+            backdrop-filter: blur(12px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 1000; padding: 24px;
+        }
+        .ending-overlay.active { display: flex; }
+        .ending-box {
+            max-width: 480px; width: 100%;
+            background: linear-gradient(160deg, #FFFCF5, #FFF5EC);
+            border-radius: 48px; padding: 32px 36px 28px;
+            box-shadow: 0 48px 120px rgba(60, 40, 25, 0.3);
+            text-align: center;
+            border: 3px solid rgba(255,255,255,0.7);
+            animation: slideUp 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
+            position: relative;
+        }
+        .ending-box .avatar-big {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFD5B8, #FF9B6B);
+            border: 4px solid #fff;
+            box-shadow: 0 8px 30px rgba(255,139,107,0.25);
+            margin: -50px auto 10px; position: relative;
+        }
+        .ending-box .avatar-big .eye {
+            position: absolute; width: 11px; height: 13px;
+            background: #4A3728; border-radius: 50%; top: 24px;
+        }
+        .ending-box .avatar-big .eye.l { left: 17px; }
+        .ending-box .avatar-big .eye.r { right: 17px; }
+        .ending-box .avatar-big .eye::after {
+            content: ''; position: absolute; width: 4px; height: 4px;
+            background: #fff; border-radius: 50%; top: 3px; left: 3px;
+        }
+        .ending-box .avatar-big .mouth {
+            position: absolute; bottom: 14px; left: 50%;
+            transform: translateX(-50%); width: 22px; height: 11px;
+            border-bottom: 4px solid #8B5E3C; border-radius: 0 0 30px 30px;
+        }
+        .ending-title { font-size: 28px; font-weight: 800; color: #4A3728; margin-top: 2px; }
+        .ending-sub { font-size: 15px; color: #B08868; margin-bottom: 14px; font-weight: 500; }
+        .ending-quote {
+            font-size: 17px; line-height: 1.7; color: #5A4A38;
+            background: linear-gradient(135deg, rgba(255,235,220,0.4), rgba(255,220,200,0.2));
+            padding: 16px 20px; border-radius: 22px;
+            margin-bottom: 18px; font-style: italic;
+            border-left: 5px solid #FFB088;
+        }
+        .ending-footer {
+            font-size: 14px; color: #B08868; line-height: 1.6;
+            padding-top: 10px; border-top: 2px dashed #F0E8DE;
+        }
+        .ending-footer strong { color: #8A7860; font-weight: 600; }
+        .btn-restart {
+            margin-top: 18px;
+            background: linear-gradient(145deg, #FF9B6B, #FF7E5F);
+            border: none; padding: 11px 44px;
+            border-radius: 60px; font-size: 16px; font-weight: 700;
+            color: #fff; cursor: pointer; transition: 0.3s;
+            border: 2px solid rgba(255,255,255,0.4);
+            box-shadow: 0 6px 20px rgba(255,139,107,0.25);
+        }
+        .btn-restart:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(255,139,107,0.35); }
+
+        /* ===== 身份选择 ===== */
+        .identity-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(90, 60, 40, 0.5);
+            backdrop-filter: blur(12px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1100; padding: 24px;
+        }
+        .identity-overlay.hidden { display: none; }
+        .identity-box {
+            max-width: 580px; width: 100%;
+            background: linear-gradient(160deg, #FFFCF5, #FFF5EC);
+            border-radius: 48px; padding: 32px 36px 28px;
+            box-shadow: 0 48px 120px rgba(60, 40, 25, 0.3);
+            text-align: center;
+            border: 3px solid rgba(255,255,255,0.7);
+            animation: slideUp 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
+        }
+        .identity-box .avatar-big {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFD5B8, #FF9B6B);
+            border: 4px solid #fff;
+            box-shadow: 0 8px 30px rgba(255,139,107,0.2);
+            margin: -46px auto 10px; position: relative;
+        }
+        .identity-box .avatar-big .eye {
+            position: absolute; width: 10px; height: 12px;
+            background: #4A3728; border-radius: 50%; top: 22px;
+        }
+        .identity-box .avatar-big .eye.l { left: 15px; }
+        .identity-box .avatar-big .eye.r { right: 15px; }
+        .identity-box .avatar-big .eye::after {
+            content: ''; position: absolute; width: 3px; height: 3px;
+            background: #fff; border-radius: 50%; top: 2px; left: 2px;
+        }
+        .identity-box .avatar-big .mouth {
+            position: absolute; bottom: 12px; left: 50%;
+            transform: translateX(-50%); width: 18px; height: 9px;
+            border-bottom: 4px solid #8B5E3C; border-radius: 0 0 30px 30px;
+        }
+        .identity-box h2 { font-size: 24px; color: #4A3728; margin-bottom: 2px; font-weight: 800; }
+        .identity-box .sub { color: #B08868; font-size: 14px; margin-bottom: 18px; }
+        .identity-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 12px; margin-bottom: 18px;
+        }
+        .identity-card {
+            background: rgba(255, 250, 242, 0.6);
+            border-radius: 20px;
+            padding: 0 0 12px;
+            border: 3px solid rgba(255, 220, 190, 0.3);
+            cursor: pointer;
+            transition: 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+            text-align: center;
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+        }
+        .identity-card:hover {
+            border-color: #FFB088;
+            transform: translateY(-5px);
+            background: rgba(255, 250, 242, 0.85);
+            box-shadow: 0 14px 32px rgba(255,139,107,0.12);
+        }
+        .identity-card.selected {
+            border-color: #FF9B6B;
+            background: rgba(255, 235, 220, 0.4);
+            box-shadow: 0 0 0 4px rgba(255, 139, 107, 0.15);
+        }
+        .identity-card .char-illustration {
+            width: 100%; height: 100px;
+            background: linear-gradient(135deg, #FFF0E0, #FFE8D6);
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .identity-card .char-illustration img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .identity-card .emoji { font-size: 24px; display: block; }
+        .identity-card .name { font-weight: 700; color: #4A3728; font-size: 16px; margin-top: 1px; }
+        .identity-card .desc { font-size: 11px; color: #B08868; margin-top: 1px; }
+        .identity-card .bonus {
+            font-size: 11px; color: #4A9F4A; margin-top: 4px;
+            background: rgba(100, 180, 100, 0.1);
+            padding: 2px 12px; border-radius: 30px;
+            display: inline-block; font-weight: 600;
+        }
+        .btn-start-game {
+            background: linear-gradient(145deg, #FF9B6B, #FF7E5F);
+            border: none; padding: 12px 46px;
+            border-radius: 60px; font-size: 17px; font-weight: 700;
+            color: #fff; cursor: pointer; transition: 0.3s;
+            border: 2px solid rgba(255,255,255,0.4);
+            box-shadow: 0 6px 24px rgba(255,139,107,0.2);
+        }
+        .btn-start-game:hover:not(:disabled) {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(255,139,107,0.3);
+        }
+        .btn-start-game:disabled { opacity: 0.4; pointer-events: none; }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 640px) {
+            .game-box { padding: 18px 14px 16px; border-radius: 32px; }
+            .avatar { width: 46px; height: 46px; }
+            .avatar .eye { width: 7px; height: 9px; top: 16px; }
+            .avatar .eye.l { left: 9px; }
+            .avatar .eye.r { right: 9px; }
+            .avatar .mouth { width: 14px; height: 7px; bottom: 9px; }
+            .main-title { font-size: 17px; padding: 4px 12px; }
+            .main-title small { font-size: 11px; padding: 1px 8px; }
+            .stage-badge { font-size: 12px; padding: 4px 12px; }
+            .identity-badge { font-size: 12px; padding: 4px 12px; }
+            .dashboard { flex-direction: column; align-items: center; gap: 10px; padding: 12px 14px; }
+            .radar-wrap { flex: 0 0 120px; height: 120px; width: 120px; }
+
+            /* 选项卡片改为单列 */
+            .choices-area {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .choice-illustration {
+                height: 110px;
+            }
+            .choice-title { font-size: 15px; }
+            .choice-emoji { font-size: 22px; margin-top: 8px; }
+
+            .modal-box { padding: 22px 18px 18px; }
+            .ending-box { padding: 24px 18px 20px; }
+            .identity-box { padding: 24px 18px 20px; }
+            .identity-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .identity-card .char-illustration { height: 80px; }
+            .top-bar { flex-direction: column; align-items: stretch; gap: 6px; }
+            .stage-badge { text-align: center; }
+            .narrative-box { padding: 12px 16px; min-height: 54px; }
+            .narrative-box::before { font-size: 18px; left: 14px; top: -10px; }
+            .narrative-text { font-size: 14px; padding-left: 4px; }
+            .btn-continue { padding: 10px 28px; font-size: 15px; }
+        }
+
+        @media (max-width: 420px) {
+            .identity-grid { grid-template-columns: 1fr 1fr; }
+            .identity-card .char-illustration { height: 70px; }
+            .choice-illustration { height: 90px; }
+            .choice-title { font-size: 14px; }
+            .choice-hint { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 装饰元素 -->
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="sparkle">✨</div>
+    <div class="sparkle">⭐</div>
+    <div class="sparkle">✨</div>
+    <div class="sparkle">⭐</div>
+
+    <!-- ===== 身份选择 ===== -->
+    <div class="identity-overlay" id="identityOverlay">
+        <div class="identity-box">
+            <div class="avatar-big" id="identityAvatarBig">
+                <div class="eye l"></div><div class="eye r"></div><div class="mouth"></div>
+            </div>
+            <h2>🌈 重生 · 选择你的身份</h2>
+            <div class="sub">不同的起点，影响你的初始属性</div>
+            <div class="identity-grid" id="identityGrid"></div>
+            <button class="btn-start-game" id="btnStartGame" disabled>开始这一生 →</button>
+        </div>
+    </div>
+
+    <!-- ===== 主游戏 ===== -->
+    <div class="game-box" id="app">
+        <div class="top-bar">
+            <div class="title-wrap">
+                <div class="avatar" id="avatarMain">
+                    <div class="eye l"></div><div class="eye r"></div>
+                    <div class="mouth smile"></div>
+                    <div class="cheek l"></div><div class="cheek r"></div>
+                </div>
+                <div class="main-title">🌈 取舍之间 <small>平行宇宙</small></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <span class="identity-badge" id="identityBadge">🎒 追梦人</span>
+                <span class="stage-badge" id="stageBadge">22岁 · 启程</span>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="radar-wrap"><canvas id="radarChart"></canvas></div>
+            <div class="attrs-wrap" id="attrsWrap">
+                <div class="attr-row">
+                    <span class="attr-icon">⚡</span><span class="attr-label">精力</span>
+                    <div class="attr-bar-bg"><div class="attr-bar-fill energy" id="barEnergy" style="width:50%"></div></div>
+                    <span class="attr-val" id="valEnergy">50</span>
+                </div>
+                <div class="attr-row">
+                    <span class="attr-icon">💰</span><span class="attr-label">资金</span>
+                    <div class="attr-bar-bg"><div class="attr-bar-fill money" id="barMoney" style="width:50%"></div></div>
+                    <span class="attr-val" id="valMoney">50</span>
+                </div>
+                <div class="attr-row">
+                    <span class="attr-icon">🧠</span><span class="attr-label">心智</span>
+                    <div class="attr-bar-bg"><div class="attr-bar-fill mind" id="barMind" style="width:50%"></div></div>
+                    <span class="attr-val" id="valMind">50</span>
+                </div>
+                <div class="attr-row">
+                    <span class="attr-icon">❤️</span><span class="attr-label">关系</span>
+                    <div class="attr-bar-bg"><div class="attr-bar-fill relationship" id="barRelationship" style="width:50%"></div></div>
+                    <span class="attr-val" id="valRelationship">50</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="choices-area" id="choicesArea"></div>
+
+        <div class="narrative-box">
+            <div class="narrative-text" id="narrativeText">
+                <span class="age-tag">🌿</span> 选一个身份，开启你的平行人生。
+            </div>
+        </div>
+
+        <div class="continue-area">
+            <button class="btn-continue" id="btnContinue">继续 →</button>
+        </div>
+    </div>
+
+    <!-- ===== 确认弹窗 ===== -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-box">
+            <div class="avatar-mini">
+                <div class="eye l"></div><div class="eye r"></div><div class="mouth"></div>
+            </div>
+            <div class="modal-title">🌈 权衡</div>
+            <div class="modal-sub">每一次选择，都在塑造未来的你</div>
+            <div class="modal-choice-name" id="modalChoiceName">—</div>
+            <div class="modal-balance">
+                <div class="modal-balance-col">
+                    <span class="col-label">✨ 获得</span>
+                    <div class="col-item" id="modalGains">—</div>
+                </div>
+                <div class="modal-balance-col loss-col">
+                    <span class="col-label">💔 牺牲</span>
+                    <div class="col-item" id="modalLosses">—</div>
+                </div>
+            </div>
+            <div class="modal-timer">⏳ <span class="count" id="modalTimer">3</span> 秒后确认</div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="modalCancel">再想想</button>
+                <button class="btn-confirm" id="modalConfirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 结局弹窗 ===== -->
+    <div class="ending-overlay" id="endingModal">
+        <div class="ending-box">
+            <div class="avatar-big" id="endingAvatarBig">
+                <div class="eye l"></div><div class="eye r"></div><div class="mouth"></div>
+            </div>
+            <div class="ending-title" id="endingTitle">远行者</div>
+            <div class="ending-sub" id="endingSub">平行宇宙 · 人格碎片</div>
+            <div class="ending-quote" id="endingQuote">「你是一团永不熄灭的火。」</div>
+            <div class="ending-footer">
+                <strong>这只是在无数平行宇宙里，你偶然路过的其中一个版本。</strong><br />
+                现实中的你，永远拥有下一回合。
+            </div>
+            <button class="btn-restart" id="btnRestart">🔄 再来一次</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            const IDENTITIES = [{
+                id: 'dreamer', emoji: '🎒', name: '追梦人',
+                desc: '相信热爱可抵岁月漫长',
+                bonus: { mind: 10, energy: 5 },
+                label: '心智 +10 · 精力 +5', color: 'dreamer',
+                image: 'https://s.coze.cn/image/2NNf0Q0FdHY/'
+            }, {
+                id: 'athlete', emoji: '🏃', name: '奔跑者',
+                desc: '身体是革命的本钱',
+                bonus: { energy: 15, relationship: 5 },
+                label: '精力 +15 · 关系 +5', color: 'athlete',
+                image: 'https://s.coze.cn/image/58XaLwel7FM/'
+            }, {
+                id: 'heir', emoji: '🏛️', name: '继承者',
+                desc: '站在父辈的肩膀上',
+                bonus: { money: 20, mind: -5 },
+                label: '资金 +20 · 心智 -5', color: 'heir',
+                image: 'https://s.coze.cn/image/CdpQixuTUCw/'
+            }, {
+                id: 'artist', emoji: '🎨', name: '自由魂',
+                desc: '灵魂永远滚烫',
+                bonus: { mind: 15, relationship: -5 },
+                label: '心智 +15 · 关系 -5', color: 'artist',
+                image: 'https://s.coze.cn/image/H01C_WQ3evg/'
+            }];
+
+            const STAGES = [{
+                age: '22岁', title: '启程',
+                subtitle: '从校园到社会，第一份工作决定你的起点。',
+                options: [{
+                    id: 'A', emoji: '🏙️', title: '加入创业公司', hint: '高成长 · 高风险',
+                    image: 'https://s.coze.cn/image/ZyIAy5wVe1E/',
+                    gains: { mind: 15, money: 5 }, losses: { energy: -10, relationship: -5 },
+                    narrative: '你成为创业团队的第10号员工，每天热血沸腾，但也常常在深夜焦虑。'
+                }, {
+                    id: 'B', emoji: '🏢', title: '进入大厂 / 体制内', hint: '稳定 · 规范',
+                    image: 'https://s.coze.cn/image/vka7jWFvcbA/',
+                    gains: { money: 15, relationship: 5 }, losses: { mind: -5, energy: -5 },
+                    narrative: '你穿着正装走进写字楼，一切井然有序。你获得了安全感，也失去了部分自由。'
+                }]
+            }, {
+                age: '25岁', title: '探索',
+                subtitle: '你开始思考：这份工作真的是我想要的吗？',
+                options: [{
+                    id: 'A', emoji: '✈️', title: 'gap year 旅行 / 留学', hint: '开阔眼界 · 花费积蓄',
+                    image: 'https://s.coze.cn/image/oBQY1NuKWSM/',
+                    gains: { mind: 20, relationship: 10 }, losses: { money: -20, energy: -5 },
+                    narrative: '你背着包走过十几个国家，在青旅里听陌生人讲故事。你变穷了，也变富了。'
+                }, {
+                    id: 'B', emoji: '📈', title: '在职场上拼命攀升', hint: '高收入 · 高消耗',
+                    image: 'https://s.coze.cn/image/W_4O0kMV4CM/',
+                    gains: { money: 20, mind: 10 }, losses: { energy: -20, relationship: -10 },
+                    narrative: '你每天工作12小时，连续拿了好几个季度绩效S。你升职了，但朋友约你吃饭总是约不到。'
+                }]
+            }, {
+                age: '28岁', title: '积累',
+                subtitle: '三十岁临近，你开始审视自己拥有和失去的。',
+                options: [{
+                    id: 'A', emoji: '💑', title: '进入稳定亲密关系', hint: '温暖 · 责任',
+                    image: 'https://s.coze.cn/image/GtUD9_FB3LM/',
+                    gains: { relationship: 25, energy: 5 }, losses: { money: -10, mind: -10 },
+                    narrative: '你开始和那个人规划未来，一起看房、一起存钱。你有了软肋，也有了盔甲。'
+                }, {
+                    id: 'B', emoji: '🚀', title: 'all in 副业 / 创业', hint: '高风险 · 高回报',
+                    image: 'https://s.coze.cn/image/49dyL5CnLxs/',
+                    gains: { money: 25, mind: 15 }, losses: { energy: -20, relationship: -15 },
+                    narrative: '你辞掉工作，把全部积蓄投入自己的项目。你成了自己的老板，也成了最累的员工。'
+                }]
+            }, {
+                age: '30岁', title: '沉淀',
+                subtitle: '三十而立，你开始理解"立"不是结果，而是状态。',
+                options: [{
+                    id: 'A', emoji: '🏡', title: '买房 / 定居', hint: '安稳 · 负债',
+                    image: 'https://s.coze.cn/image/B3By4RbFR7Q/',
+                    gains: { relationship: 10, money: 10 }, losses: { energy: -10, mind: -10 },
+                    narrative: '你签下房贷合同，终于有了自己的小窝。你感到踏实，也感到被绑住。'
+                }, {
+                    id: 'B', emoji: '🌊', title: '继续漂着 / 探索新城市', hint: '自由 · 孤独',
+                    image: 'https://s.coze.cn/image/mwY0N5za3ms/',
+                    gains: { mind: 15, energy: 5 }, losses: { relationship: -15, money: -5 },
+                    narrative: '你拖着行李箱去了新的城市，一切重新开始。你享受自由，也偶尔感到迷茫。'
+                }]
+            }, {
+                age: '32岁', title: '复盘',
+                subtitle: '回头看看走过的路，你看见了什么？',
+                options: [{
+                    id: 'A', emoji: '🪞', title: '接受平庸，经营日常', hint: '知足 · 温暖',
+                    image: 'https://s.coze.cn/image/9XYoOKaowuY/',
+                    gains: { relationship: 15, energy: 15 }, losses: { money: -5, mind: -5 },
+                    narrative: '你学会了做饭，养了一只猫，周末和好友喝下午茶。你不再追逐风口，但每天都睡得安稳。'
+                }, {
+                    id: 'B', emoji: '🔥', title: '永不停止折腾', hint: '燃烧 · 不留遗憾',
+                    image: 'https://s.coze.cn/image/YzHRE4elCO4/',
+                    gains: { mind: 20, money: 10 }, losses: { energy: -20, relationship: -10 },
+                    narrative: '你依然在深夜写方案、学新技能。你累，但你享受每一次突破的狂喜。'
+                }]
+            }];
+
+            const ENDINGS = {
+                energy: { title: '远行者', quote: '你是一团永不熄灭的火，用脚步丈量世界的边界。' },
+                money: { title: '筑塔者', quote: '你搭建了坚固的堡垒，但别忘记给窗台留一盆花。' },
+                mind: { title: '观星人', quote: '你读懂了世界的复杂，也请拥抱自己的单纯。' },
+                relationship: { title: '织网者', quote: '你的温暖联结了无数孤岛，你是人间良药。' }
+            };
+
+            const ATTR_KEYS = ['energy', 'money', 'mind', 'relationship'];
+            const ATTR_LABELS = { energy: '精力', money: '资金', mind: '心智', relationship: '关系' };
+            const ATTR_ICONS = { energy: '⚡', money: '💰', mind: '🧠', relationship: '❤️' };
+
+            let state = {
+                identity: null,
+                attrs: { energy: 50, money: 50, mind: 50, relationship: 50 },
+                currentStageIndex: 0, isProcessing: false, isEnded: false,
+                completedStages: 0, pendingOption: null, pendingOptionIndex: null,
+                timerCount: 3, timerInterval: null, gameStarted: false
+            };
+
+            const $ = (s) => document.querySelector(s);
+            const dom = {
+                identityOverlay: $('#identityOverlay'), identityGrid: $('#identityGrid'),
+                identityBadge: $('#identityBadge'), btnStartGame: $('#btnStartGame'),
+                identityAvatarBig: $('#identityAvatarBig'), avatarMain: $('#avatarMain'),
+                stageBadge: $('#stageBadge'), choicesArea: $('#choicesArea'),
+                narrativeText: $('#narrativeText'), btnContinue: $('#btnContinue'),
+                barEnergy: $('#barEnergy'), barMoney: $('#barMoney'), barMind: $('#barMind'),
+                barRelationship: $('#barRelationship'), valEnergy: $('#valEnergy'),
+                valMoney: $('#valMoney'), valMind: $('#valMind'), valRelationship: $('#valRelationship'),
+                confirmModal: $('#confirmModal'), modalChoiceName: $('#modalChoiceName'),
+                modalGains: $('#modalGains'), modalLosses: $('#modalLosses'),
+                modalTimer: $('#modalTimer'), modalConfirm: $('#modalConfirm'),
+                modalCancel: $('#modalCancel'), endingModal: $('#endingModal'),
+                endingTitle: $('#endingTitle'), endingSub: $('#endingSub'),
+                endingQuote: $('#endingQuote'), endingAvatarBig: $('#endingAvatarBig'),
+                btnRestart: $('#btnRestart'), radarCanvas: $('#radarChart')
+            };
+            let radarChart = null;
+
+            function initRadar() {
+                const ctx = dom.radarCanvas.getContext('2d');
+                radarChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['精力', '资金', '心智', '关系'],
+                        datasets: [{
+                            label: '当前属性', data: [50, 50, 50, 50],
+                            backgroundColor: 'rgba(255, 158, 120, 0.2)',
+                            borderColor: 'rgba(255, 139, 107, 0.8)',
+                            borderWidth: 3,
+                            pointBackgroundColor: 'rgba(255, 139, 107, 0.9)',
+                            pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5,
+                            fill: true, tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                min: 0, max: 100,
+                                ticks: { stepSize: 20, font: { size: 9, weight: 'bold' }, color: '#B08868', backdropColor: 'transparent' },
+                                grid: { color: 'rgba(255,160,120,0.12)', circular: true },
+                                angleLines: { color: 'rgba(255,160,120,0.12)' },
+                                pointLabels: { font: { size: 12, weight: '700' }, color: '#6A5240' }
+                            }
+                        },
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        animation: { duration: 500, easing: 'easeOutQuart' }
+                    }
+                });
+            }
+            function updateRadar() {
+                if (!radarChart) return;
+                radarChart.data.datasets[0].data = ATTR_KEYS.map(k => state.attrs[k]);
+                radarChart.update();
+            }
+            function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+            function updateAttrsUI() {
+                const a = state.attrs;
+                const bars = { energy: dom.barEnergy, money: dom.barMoney, mind: dom.barMind, relationship: dom.barRelationship };
+                const vals = { energy: dom.valEnergy, money: dom.valMoney, mind: dom.valMind, relationship: dom.valRelationship };
+                ATTR_KEYS.forEach(k => {
+                    bars[k].style.width = a[k] + '%';
+                    vals[k].textContent = a[k];
+                    vals[k].classList.remove('flash');
+                    void vals[k].offsetWidth;
+                    vals[k].classList.add('flash');
+                });
+                updateRadar();
+            }
+            function setAvatarColor(container, colorClass) {
+                if (!container) return;
+                ['dreamer', 'athlete', 'heir', 'artist'].forEach(c => container.classList.remove(c));
+                if (colorClass) container.classList.add(colorClass);
+            }
+
+            let selectedIdentityId = null;
+            function renderIdentities() {
+                const grid = dom.identityGrid;
+                grid.innerHTML = '';
+                IDENTITIES.forEach(id => {
+                    const card = document.createElement('div');
+                    card.className = 'identity-card';
+                    card.dataset.id = id.id;
+                    card.innerHTML = `
+                        <div class="char-illustration"><img src="${id.image}" alt="${id.name}" loading="lazy" /></div>
+                        <span class="emoji">${id.emoji}</span>
+                        <div class="name">${id.name}</div>
+                        <div class="desc">${id.desc}</div>
+                        <div class="bonus">${id.label}</div>
+                    `;
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.identity-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        selectedIdentityId = id.id;
+                        dom.btnStartGame.disabled = false;
+                        const identity = IDENTITIES.find(i => i.id === selectedIdentityId);
+                        if (identity) setAvatarColor(dom.identityAvatarBig, identity.color);
+                    });
+                    grid.appendChild(card);
+                });
+            }
+
+            function startGameWithIdentity() {
+                if (!selectedIdentityId) return;
+                const identity = IDENTITIES.find(i => i.id === selectedIdentityId);
+                if (!identity) return;
+                state.identity = identity;
+                state.gameStarted = true;
+                dom.identityOverlay.classList.add('hidden');
+                dom.identityBadge.textContent = identity.emoji + ' ' + identity.name;
+                setAvatarColor(dom.avatarMain, identity.color);
+                const bonus = identity.bonus;
+                ATTR_KEYS.forEach(k => { if (bonus[k]) state.attrs[k] = clamp(state.attrs[k] + bonus[k]); });
+                updateAttrsUI();
+                state.currentStageIndex = 0;
+                renderStage();
+                setNarrative('🌱 你带着「' + identity.name + '」的烙印，走进了这个世界。', false);
+                dom.choicesArea.querySelectorAll('.choice-card').forEach(c => c.classList.remove('disabled'));
+            }
+
+            function renderStage() {
+                const stage = STAGES[state.currentStageIndex];
+                if (!stage) { showEnding(); return; }
+                dom.stageBadge.textContent = stage.age + ' · ' + stage.title;
+                dom.choicesArea.innerHTML = '';
+                stage.options.forEach((opt, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'choice-card';
+                    card.dataset.index = idx;
+                    card.innerHTML = `
+                        <span class="choice-tag">${opt.id}</span>
+                        <div class="choice-illustration"><img src="${opt.image}" alt="${opt.title}" loading="lazy" /></div>
+                        <span class="choice-emoji">${opt.emoji}</span>
+                        <div class="choice-title">${opt.title}</div>
+                        <div class="choice-hint">${opt.hint}</div>
+                    `;
+                    card.addEventListener('click', () => {
+                        if (state.isProcessing || state.isEnded) return;
+                        onChoiceClick(idx);
+                    });
+                    dom.choicesArea.appendChild(card);
+                });
+                dom.btnContinue.classList.remove('show');
+                setNarrative(`📌 ${stage.age} · ${stage.title} —— ${stage.subtitle}`, false);
+            }
+
+            function setNarrative(text, withAgeTag = true) {
+                const el = dom.narrativeText;
+                el.classList.remove('show');
+                requestAnimationFrame(() => {
+                    if (withAgeTag) {
+                        const stage = STAGES[state.currentStageIndex];
+                        el.innerHTML = `<span class="age-tag">${stage ? stage.age : '🌿'}</span> ${text}`;
+                    } else {
+                        el.innerHTML = text;
+                    }
+                    void el.offsetWidth;
+                    el.classList.add('show');
+                });
+            }
+
+            function onChoiceClick(index) {
+                if (state.isProcessing) return;
+                const stage = STAGES[state.currentStageIndex];
+                const option = stage.options[index];
+                if (!option) return;
+                state.pendingOption = option;
+                state.pendingOptionIndex = index;
+                dom.modalChoiceName.textContent = option.emoji + ' ' + option.title;
+                let gainsHtml = '', lossesHtml = '';
+                const gEntries = Object.entries(option.gains).filter(([_, v]) => v > 0);
+                const lEntries = Object.entries(option.losses).filter(([_, v]) => v < 0);
+                if (gEntries.length === 0) gainsHtml = '<span style="color:#B08868;">—</span>';
+                gEntries.forEach(([k, v]) => { gainsHtml += `<div class="gain">${ATTR_ICONS[k]} ${ATTR_LABELS[k]} +${v}</div>`; });
+                if (lEntries.length === 0) lossesHtml = '<span style="color:#B08868;">—</span>';
+                lEntries.forEach(([k, v]) => { lossesHtml += `<div class="loss">${ATTR_ICONS[k]} ${ATTR_LABELS[k]} ${v}</div>`; });
+                dom.modalGains.innerHTML = gainsHtml;
+                dom.modalLosses.innerHTML = lossesHtml;
+                state.timerCount = 3;
+                dom.modalTimer.textContent = '3';
+                dom.modalConfirm.classList.remove('enabled');
+                dom.modalConfirm.textContent = '确认';
+                dom.confirmModal.classList.add('active');
+                state.isProcessing = true;
+                if (state.timerInterval) clearInterval(state.timerInterval);
+                state.timerInterval = setInterval(() => {
+                    state.timerCount -= 1;
+                    dom.modalTimer.textContent = Math.max(0, state.timerCount);
+                    if (state.timerCount <= 0) {
+                        clearInterval(state.timerInterval);
+                        state.timerInterval = null;
+                        dom.modalTimer.textContent = '✓';
+                        dom.modalConfirm.classList.add('enabled');
+                        dom.modalConfirm.textContent = '✅ 确认';
+                    }
+                }, 1000);
+            }
+
+            function confirmChoice() {
+                if (!state.pendingOption || state.timerCount > 0) return;
+                const option = state.pendingOption;
+                const a = state.attrs;
+                Object.entries(option.gains).forEach(([k, v]) => { a[k] = clamp(a[k] + v); });
+                Object.entries(option.losses).forEach(([k, v]) => { a[k] = clamp(a[k] + v); });
+                updateAttrsUI();
+                setNarrative(option.narrative, true);
+                state.completedStages += 1;
+                dom.choicesArea.querySelectorAll('.choice-card').forEach(c => c.classList.add('disabled'));
+                dom.btnContinue.classList.add('show');
+                dom.btnContinue.textContent = state.currentStageIndex < STAGES.length - 1 ? '继续 →' : '🌟 看见结局';
+                closeModal();
+                state.pendingOption = null;
+                state.isProcessing = false;
+            }
+
+            function cancelChoice() {
+                closeModal();
+                state.pendingOption = null;
+                state.isProcessing = false;
+                if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+            }
+            function closeModal() {
+                dom.confirmModal.classList.remove('active');
+                if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+            }
+
+            function goToNextStage() {
+                if (state.isProcessing) return;
+                if (state.currentStageIndex >= STAGES.length - 1) { showEnding(); return; }
+                state.currentStageIndex += 1;
+                renderStage();
+                dom.choicesArea.querySelectorAll('.choice-card').forEach(c => c.classList.remove('disabled'));
+                document.querySelector('.game-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            function showEnding() {
+                if (state.isEnded) return;
+                state.isEnded = true;
+                const a = state.attrs;
+                let maxKey = 'energy', maxVal = a.energy;
+                ATTR_KEYS.forEach(k => { if (a[k] > maxVal) { maxVal = a[k]; maxKey = k; } });
+                const allSame = ATTR_KEYS.every(k => a[k] === a.energy);
+                if (allSame) { const keys = ['energy', 'money', 'mind', 'relationship']; maxKey = keys[Math.floor(Math.random() * keys.length)]; }
+                const ending = ENDINGS[maxKey] || ENDINGS.energy;
+                dom.endingTitle.textContent = ending.title;
+                dom.endingSub.textContent = '平行宇宙 · 人格碎片';
+                dom.endingQuote.textContent = '「' + ending.quote + '」';
+                dom.endingAvatarBig.querySelector('.mouth').className = 'mouth smile';
+                dom.endingModal.classList.add('active');
+            }
+
+            function resetGame() {
+                dom.confirmModal.classList.remove('active');
+                dom.endingModal.classList.remove('active');
+                if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+                state.attrs = { energy: 50, money: 50, mind: 50, relationship: 50 };
+                state.currentStageIndex = 0; state.isProcessing = false;
+                state.isEnded = false; state.completedStages = 0;
+                state.pendingOption = null; state.gameStarted = false;
+                state.identity = null; selectedIdentityId = null;
+                dom.identityOverlay.classList.remove('hidden');
+                document.querySelectorAll('.identity-card').forEach(c => c.classList.remove('selected'));
+                dom.btnStartGame.disabled = true;
+                dom.identityBadge.textContent = '🎒 追梦人';
+                dom.btnContinue.classList.remove('show');
+                dom.choicesArea.innerHTML = '';
+                setNarrative('🌱 选一个身份，开启你的平行人生。', false);
+                updateAttrsUI();
+                setAvatarColor(dom.avatarMain, 'dreamer');
+                setAvatarColor(dom.identityAvatarBig, 'dreamer');
+                dom.endingAvatarBig.querySelector('.mouth').className = 'mouth smile';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            dom.modalConfirm.addEventListener('click', confirmChoice);
+            dom.modalCancel.addEventListener('click', cancelChoice);
+            dom.btnContinue.addEventListener('click', goToNextStage);
+            dom.btnRestart.addEventListener('click', resetGame);
+            dom.btnStartGame.addEventListener('click', startGameWithIdentity);
+            dom.confirmModal.addEventListener('click', (e) => { if (e.target === dom.confirmModal) cancelChoice(); });
+            document.addEventListener('keydown', (e) => {
+                if (dom.confirmModal.classList.contains('active')) {
+                    if (e.key === 'Escape') { cancelChoice(); e.preventDefault(); }
+                    else if (e.key === 'Enter' && dom.modalConfirm.classList.contains('enabled')) { confirmChoice(); e.preventDefault(); }
+                }
+                if (dom.endingModal.classList.contains('active') && e.key === 'Enter') { resetGame(); e.preventDefault(); }
+            });
+
+            renderIdentities();
+            initRadar();
+            updateAttrsUI();
+            dom.identityOverlay.classList.remove('hidden');
+            setNarrative('🌱 选一个身份，开启你的平行人生。', false);
+            setAvatarColor(dom.avatarMain, 'dreamer');
+            setAvatarColor(dom.identityAvatarBig, 'dreamer');
+        })();
+    </script>
+</body>
+</html>
